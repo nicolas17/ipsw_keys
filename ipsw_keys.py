@@ -15,7 +15,7 @@ import usbexec
 import zipfile
 import plistlib
 
-if len(argv) < 4:
+if len(argv) < 4 or argv[1] == "-h" or argv[1] == "--help":
     print("Usage: " + argv[0] + " <device ID> <version> <output.json> [skip download]")
     exit(1)
 
