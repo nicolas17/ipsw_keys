@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pip install asn1
+# pip install future
 from sys import argv, stdout
 from os import system, remove
 from urlparse import urlparse
@@ -14,10 +14,6 @@ import httplib
 import usbexec
 import zipfile
 import plistlib
-
-if len(argv) < 4 or argv[1] == "-h" or argv[1] == "--help":
-    print("Usage: " + argv[0] + " <device ID> <version> <output.json> [skip download]")
-    exit(1)
 
 dev = dfu.acquire_device()
 serial_number = dev.serial_number
@@ -37,99 +33,115 @@ if bdid_m == None:
 bdid = bdid_m.group(1)
 dfu.release_device(dev)
 
-if len(argv) < 5: 
-    def getFile(url):
-        uri = urlparse(url)
-        con = httplib.HTTPSConnection(uri.netloc, context=ssl.SSLContext(ssl.PROTOCOL_SSLv23))
-        con.request("GET", uri.path)
-        res = con.getresponse()
-        if math.floor(res.status / 100) != 2:
-            print(res.status)
-            return None
-        retval = res.read()
-        con.close()
-        return retval
+def extractKeys(infile, outfile, delete=False):
+    print("Reading manifest...")
+    zip = zipfile.ZipFile(infile)
+    manifest = plistlib.readPlistFromString(zip.read("BuildManifest.plist"))
 
-    firmwares_json = getFile("https://api.ipsw.me/v4/device/" + argv[1])
-    if firmwares_json == None:
-        print("Unknown device type " + argv[1])
-        exit(2)
-    firmwares = json.loads(firmwares_json)
-    if firmwares == None:
-        print("Error decoding firmwares JSON")
-        exit(2)
+    print("Reading keys...")
+    output = {}
 
     try:
-        firm = next(item for item in firmwares["firmwares"] if item["version"] == argv[2])
+        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid)
     except StopIteration:
-        print("Unknown version " + argv[2] + " for device " + argv[1])
-        exit(3)
-    if firm == None:
-        print("Unknown version " + argv[2] + " for device " + argv[1])
-        exit(3)
+        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+    if identity == None:
+        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+    for k,v in identity["Manifest"].items():
+        if not (k != "OS" and k != "KernelCache" and k != "RestoreKernelCache" and k != "RestoreTrustCache" and k != "StaticTrustCache" and k != "BasebandFirmware"): continue
+        dec = asn1.Decoder()
+        dec.start(zip.read(v["Info"]["Path"]))
+        #pretty_print(dec, stdout)
+        dec.enter()
+        if dec.read() == None: 
+            print("Missing id 0")
+            continue
+        if dec.read() == None: 
+            print("Missing id 1")
+            continue
+        if dec.read() == None: 
+            print("Missing id 2")
+            continue
+        if dec.read() == None: 
+            print("Missing id 3")
+            continue
+        if dec.eof():
+            output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+            continue
+        tag, value = dec.read()
+        dec.start(value)
+        dec.enter()
+        dec.enter()
+        dec.read()
+        tag, ivenc = dec.read()
+        tag, keyenc = dec.read()
+        keys = None
 
-    print("Downloading iOS " + firm["version"] + " (" + firm["buildid"] + ") for device " + firm["identifier"] + "...")
-    system("curl -o firmware.ipsw -L --progress-bar " + firm["url"])
+        if 'PWND:[checkm8]' in serial_number:
+            pwned = usbexec.PwnedUSBDevice()
+            keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
+        else:
+            device = dfuexec.PwnedDFUDevice()
+            keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
+        output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
 
-print("Reading manifest...")
-zip = zipfile.ZipFile("firmware.ipsw")
-manifest = plistlib.readPlistFromString(zip.read("BuildManifest.plist"))
+    file = open(outfile, "w")
+    json.dump(output, file)
+    file.close()
 
-print("Reading keys...")
-output = {}
+    if delete:
+        print("Cleaning up...")
+        remove(infile)
 
-try:
-    identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid)
-except StopIteration:
-    print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-    exit(5)
-if identity == None:
-    print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-    exit(5)
-for k,v in identity["Manifest"].items():
-    if not (k != "OS" and k != "KernelCache" and k != "RestoreKernelCache" and k != "RestoreTrustCache" and k != "StaticTrustCache" and k != "BasebandFirmware"): continue
-    dec = asn1.Decoder()
-    dec.start(zip.read(v["Info"]["Path"]))
-    #pretty_print(dec, stdout)
-    dec.enter()
-    if dec.read() == None: 
-        print("Missing id 0")
-        continue
-    if dec.read() == None: 
-        print("Missing id 1")
-        continue
-    if dec.read() == None: 
-        print("Missing id 2")
-        continue
-    if dec.read() == None: 
-        print("Missing id 3")
-        continue
-    if dec.eof():
-        output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
-        continue
-    tag, value = dec.read()
-    dec.start(value)
-    dec.enter()
-    dec.enter()
-    dec.read()
-    tag, ivenc = dec.read()
-    tag, keyenc = dec.read()
-    keys = None
+    print("Keys saved to " + outfile)
 
-    if 'PWND:[checkm8]' in serial_number:
-        pwned = usbexec.PwnedUSBDevice()
-        keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
-    else:
-        device = dfuexec.PwnedDFUDevice()
-        keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
-    output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+if __name__ == "__main__":
+    if len(argv) < 4:
+        print("Usage: " + argv[0] + " <device ID> <version> <output.json> [skip download]")
+        exit(1)
 
-file = open(argv[3], "w")
-json.dump(output, file)
-file.close()
+    if len(argv) < 5: 
+        def getFile(url):
+            uri = urlparse(url)
+            con = httplib.HTTPSConnection(uri.netloc, context=ssl.SSLContext(ssl.PROTOCOL_SSLv23))
+            con.request("GET", uri.path)
+            res = con.getresponse()
+            if math.floor(res.status / 100) != 2:
+                print(res.status)
+                return None
+            retval = res.read()
+            con.close()
+            return retval
 
-if len(argv) < 5:
-    print("Cleaning up...")
-    remove("firmware.ipsw")
+        firmwares_json = getFile("https://api.ipsw.me/v4/device/" + argv[1])
+        if firmwares_json == None:
+            print("Unknown device type " + argv[1])
+            exit(2)
+        firmwares = json.loads(firmwares_json)
+        if firmwares == None:
+            print("Error decoding firmwares JSON")
+            exit(2)
+        
+        if argv[2] == "all":
+            # could this be a mistake to run?
+            for firm in firmwares["firmwares"]:
+                print("Downloading iOS " + firm["version"] + " (" + firm["buildid"] + ") for device " + firm["identifier"] + "...")
+                system("curl -o firmware.ipsw -L --progress-bar " + firm["url"])
+                extractKeys("firmware.ipsw", argv[3] + "/" + firm["identifier"] + "_" + firm["version"] + "_" + firm["buildid"] + "_Keys.json", True)
+            exit(0)
 
-print("Keys saved to " + argv[3])
+        try:
+            firm = next(item for item in firmwares["firmwares"] if item["version"] == argv[2])
+        except StopIteration:
+            print("Unknown version " + argv[2] + " for device " + argv[1])
+            exit(3)
+        if firm == None:
+            print("Unknown version " + argv[2] + " for device " + argv[1])
+            exit(3)
+
+        print("Downloading iOS " + firm["version"] + " (" + firm["buildid"] + ") for device " + firm["identifier"] + "...")
+        system("curl -o firmware.ipsw -L --progress-bar " + firm["url"])
+    
+    extractKeys("firmware.ipsw", argv[3], len(argv) < 5)

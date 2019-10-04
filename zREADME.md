@@ -4,14 +4,15 @@
 3. Boot the device in DFU mode and run checkm8 exploit
 4. Run the script with the device identifier, iOS version, and output JSON file
 
-Example:
+### Example
 `./ipsw_keys.py iPad4,5 12.4.2 iPad4,5_12.4.2_Keys.json`
 
+### Notes
 * Only IMG4 files are supported at the moment. This means only A7+ IPSWs can be used until I add IMG3 support.
 * The rootfs key is not extracted because the image is too big to use with the IMG4 parser. If you need the rootfs key, you will have to extract it yourself.
+* Using `all` for the iOS version will extract the keys from every available version for the device, and saves them at `<output>/<device>_<version>_<build>_Keys.json`. **THIS WILL TAKE A LONG TIME!**
 * If you add anything after the output file, the script will skip downloading and will instead look inside `firmware.ipsw` in the current directory.
-
-The outputted JSON file will have this basic format:
+* The outputted JSON file will have this basic format:
 ```json
 {
     "BatteryLow0": {
