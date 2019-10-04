@@ -1,5 +1,5 @@
 # How to use this
-1. `pip install asn1`
+1. `pip install asn1 future`
 2. Download the script to the same folder as ipwndfu
 3. Boot the device in DFU mode and run checkm8 exploit
 4. Run the script with the device identifier, iOS version, and output JSON file
