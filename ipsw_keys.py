@@ -50,7 +50,8 @@ def extractKeys(infile, outfile, delete=False):
         print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
     for k,v in identity["Manifest"].items():
-        if not (k != "OS" and k != "KernelCache" and k != "RestoreKernelCache" and k != "RestoreTrustCache" and k != "StaticTrustCache" and k != "BasebandFirmware"): continue
+        if not "Path" in v["Info"].keys(): continue
+        if not v["Info"]["Path"].endswith("im4p"): continue
         dec = asn1.Decoder()
         dec.start(zip.read(v["Info"]["Path"]))
         #pretty_print(dec, stdout)
