@@ -51,7 +51,7 @@ def extractKeys(infile, outfile, delete=False):
         exit(5)
     for k,v in identity["Manifest"].items():
         if not "Path" in v["Info"].keys(): continue
-        if not v["Info"]["Path"].endswith("im4p"): continue
+        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk"): continue
         dec = asn1.Decoder()
         dec.start(zip.read(v["Info"]["Path"]))
         #pretty_print(dec, stdout)
