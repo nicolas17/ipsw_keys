@@ -203,7 +203,16 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
  | DownloadURL{} = {}
 
 """.format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else "?", " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
-        for k,v in output.items():
+        for k in ["RootFS", "RestoreRamDisk"]:
+            v = output[k]
+            file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
+            if v["Encrypted"]:
+                file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = " + v["IV"] + "\n")
+                file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = " + v["Key"] + "\n\n")
+            else:
+                file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = Not Encrypted\n\n")
+            del output[k]
+        for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
