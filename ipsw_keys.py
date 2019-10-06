@@ -166,7 +166,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
-        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk" or k == "KernelCache" or k == "UpdateRamDisk"): continue
         if k == "OS": k = "RootFS"
 
         der = zip.read(v["Info"]["Path"])
