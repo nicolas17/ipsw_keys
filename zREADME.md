@@ -23,7 +23,7 @@ Optional arguments:
 ```
 
 ### Examples
-`./ipsw_keys.py -d iPad4,5 -v 12.4.2 -o . --auto-name`
+`./ipsw_keys.py -d iPad4,5 -v 12.4.2 -o . --auto-name`  
 `./ipsw_keys.py -i iPhone10,3,iPhone10,6_12.4.1_16G102_Restore.ipsw -o iPhoneXKeys_12.4.1.plist --plist`
 
 ### Notes
