@@ -166,7 +166,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
-        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk" or k == "KernelCache" or k == "UpdateRamDisk"): continue
+        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk" or k == "KernelCache"): continue
         if k == "OS": k = "RootFS"
 
         der = zip.read(v["Info"]["Path"])
@@ -190,6 +190,29 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                 device = dfuexec.PwnedDFUDevice()
                 keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
             output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+    
+    if "Restore.plist" in zip.namelist():
+        fpath = plistlib.readPlistFromString(zip.read("Restore.plist"))["RestoreRamDisks"]["Update"]
+        der = zip.read(fpath)
+        dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
+        if dec[2] >= len(der) - 4:
+            output["UpdateRamDisk"] = {"Path": fpath, "Encrypted": False}
+        else:
+            kbag = asn1_get_value(der, asn1_node_next(der, dec))
+            dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
+            ivenc = asn1_get_value(kbag, dec)
+            keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
+            keys = None
+
+            if 'PWND:[checkm8]' in serial_number:
+                pwned = usbexec.PwnedUSBDevice()
+                keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
+            else:
+                device = dfuexec.PwnedDFUDevice()
+                keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
+            output["UpdateRamDisk"] = {"Path": fpath, "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+
+    zip.close()
 
     file = open(outfile, "w")
     if outtype == 0: json.dump(output, file)
@@ -203,18 +226,21 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
  | DownloadURL{} = {}
 
 """.format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else "?", " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
-        for k in ["RootFS", "RestoreRamDisk"]:
+        for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
+            if k not in output.keys(): continue
             v = output[k]
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = " + v["IV"] + "\n")
                 file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = " + v["Key"] + "\n\n")
             else:
-                file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = Not Encrypted\n\n")
+                file.write(" | " + k + ("Key" if k == "RootFS" else "IV") + (" " * (maxlen - len(k) - (3 if k == "RootFS" else 2))) + " = Not Encrypted\n\n")
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
             if k == "KernelCache": k = "Kernelcache"
+            if k == "RestoreRamDisk": k = "RestoreRamdisk"
+            if k == "UpdateRamDisk": k = "UpdateRamdisk"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
