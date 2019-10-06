@@ -8,6 +8,7 @@ import ssl
 import math
 import json
 import getopt
+import image3
 import dfuexec
 import httplib
 import usbexec
@@ -138,6 +139,40 @@ def getInfo():
     bdid = bdid_m.group(1)
     dfu.release_device(dev)
 
+def getKeybag(der, k):
+    if der[:4] == "3gmI":
+        kbag = image3.Image3(der).getKeybag()
+        if kbag == None: return (None, None)
+        ivenc = kbag[:16]
+        keyenc = kbag[16:]
+        if 'PWND:[checkm8]' in serial_number:
+            pwned = usbexec.PwnedUSBDevice()
+            keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
+        else:
+            device = dfuexec.PwnedDFUDevice()
+            keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
+        return (keys[:32], keys[32:])
+    else:
+        dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
+        if dec[2] >= len(der) - 4:
+            return (None, None)
+        kbag = asn1_get_value(der, asn1_node_next(der, dec))
+        dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
+        ivenc = asn1_get_value(kbag, dec)
+        keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
+        keys = None
+
+        if "SEP" in k:
+            return ("KBAG", str(ivenc + keyenc).encode('hex'))
+        else:
+            if 'PWND:[checkm8]' in serial_number:
+                pwned = usbexec.PwnedUSBDevice()
+                keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
+            else:
+                device = dfuexec.PwnedDFUDevice()
+                keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
+            return (keys[:32], keys[32:])
+
 def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Reading manifest...")
     zip = zipfile.ZipFile(infile)
@@ -166,55 +201,23 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
-        if not (v["Info"]["Path"].endswith("im4p") or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or k == "RestoreRamDisk" or k == "KernelCache"): continue
         if k == "OS": k = "RootFS"
 
-        der = zip.read(v["Info"]["Path"])
-        dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
-        if dec[2] >= len(der) - 4:
-            output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
-            continue
-        kbag = asn1_get_value(der, asn1_node_next(der, dec))
-        dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
-        ivenc = asn1_get_value(kbag, dec)
-        keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
-        keys = None
-
-        if "SEP" in k:
-            output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": str(ivenc + keyenc).encode('hex')}
-        else:
-            if 'PWND:[checkm8]' in serial_number:
-                pwned = usbexec.PwnedUSBDevice()
-                keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
-            else:
-                device = dfuexec.PwnedDFUDevice()
-                keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
-            output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
+        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
+        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
 
     ProductType = None
     
     if "Restore.plist" in zip.namelist():
         restore = plistlib.readPlistFromString(zip.read("Restore.plist"))
         ProductType = restore["ProductType"]
-        fpath = restore["RestoreRamDisks"]["Update"]
-        der = zip.read(fpath)
-        dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
-        if dec[2] >= len(der) - 4:
-            output["UpdateRamDisk"] = {"Path": fpath, "Encrypted": False}
-        else:
-            kbag = asn1_get_value(der, asn1_node_next(der, dec))
-            dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
-            ivenc = asn1_get_value(kbag, dec)
-            keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
-            keys = None
-
-            if 'PWND:[checkm8]' in serial_number:
-                pwned = usbexec.PwnedUSBDevice()
-                keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
-            else:
-                device = dfuexec.PwnedDFUDevice()
-                keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
-            output["UpdateRamDisk"] = {"Path": fpath, "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+        if "Update" in restore["RestoreRamDisks"].keys():
+            iv, key = getKeybag(zip.read(restore["RestoreRamDisks"]["Update"]), k)
+            if iv == None: output[k] = {"Path": restore["RestoreRamDisks"]["Update"], "Encrypted": False}
+            else: output[k] = {"Path": restore["RestoreRamDisks"]["Update"], "Encrypted": True, "IV": iv, "Key": key}
 
     zip.close()
 
@@ -268,7 +271,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Keys saved to " + outfile)
 
 def usage():
-    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-ajpw] [-v version] [options] -o <output>")
+    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v version] [options] [-a] [-o <output>]")
     print("Extracts iOS encryption keys from an IPSW using a physical device's AES engine.")
     print("")
     print("Required arguments:")
@@ -277,7 +280,7 @@ def usage():
     print("    -o, --output <output>        Location to store output keys")
     print("")
     print("Optional arguments:")
-    print("    -a, --auto-name              Automatically name output based on version and device, and save in folder at <output>")
+    print("    -a, --auto-name              Automatically name output based on version and device, and save in folder at <output> if specified")
     print("    -h, --help                   Show this help prompt")
     print("    -j, --json                   Store output as JSON file")
     print("    -p, --plist                  Store output as property list file")
@@ -335,7 +338,7 @@ if __name__ == "__main__":
     if inputName == None and inputDevice == None:
         print("Error: No input file or device specified.")
         exit(1)
-    if outputName == None:
+    if outputName == None and autoName == False:
         print("Error: No output file specified.")
         exit(1)
     if inputName != None and inputDevice != None:
@@ -391,7 +394,7 @@ if __name__ == "__main__":
         system("curl -o firmware.ipsw -L --progress-bar " + firm["url"])
         inputName = "firmware.ipsw"
         infoDict = firm
-        if autoName: outputName = outputName + "/" + firm["identifier"] + "_" + firm["version"] + "_" + firm["buildid"] + "_Keys." + getext(outputType)
+        if autoName: outputName = (outputName + "/" if outputName != None else "") + firm["identifier"] + "_" + firm["version"] + "_" + firm["buildid"] + "_Keys." + getext(outputType)
     
     elif autoName: 
         if re.match("iP\w+?[0-9a-z._,]+?[0-9.]+_[0-9]+[A-Z][0-9]+_Restore.ipsw", path.basename(inputName)):
