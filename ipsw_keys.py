@@ -190,9 +190,13 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                 device = dfuexec.PwnedDFUDevice()
                 keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
             output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": keys[:32], "Key": keys[32:]}
+
+    ProductType = None
     
     if "Restore.plist" in zip.namelist():
-        fpath = plistlib.readPlistFromString(zip.read("Restore.plist"))["RestoreRamDisks"]["Update"]
+        restore = plistlib.readPlistFromString(zip.read("Restore.plist"))
+        ProductType = restore["ProductType"]
+        fpath = restore["RestoreRamDisks"]["Update"]
         der = zip.read(fpath)
         dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
         if dec[2] >= len(der) - 4:
@@ -225,7 +229,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
  | Codename{} = {}
  | DownloadURL{} = {}
 
-""".format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else "?", " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
+""".format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?"), " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
             if k not in output.keys(): continue
             v = output[k]
@@ -233,6 +237,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             if v["Encrypted"]:
                 file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = " + v["IV"] + "\n")
                 file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = " + v["Key"] + "\n\n")
+            elif k == "RootFS" and manifest["ProductVersion"][0] != "1":
+                file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = ?\n")
+                file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = ?\n\n")
             else:
                 file.write(" | " + k + ("Key" if k == "RootFS" else "IV") + (" " * (maxlen - len(k) - (3 if k == "RootFS" else 2))) + " = Not Encrypted\n\n")
             del output[k]
