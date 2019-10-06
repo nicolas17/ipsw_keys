@@ -202,8 +202,6 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
         if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
-        if k == "RestoreRamDisk" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateRamDisk"
-        if k == "RestoreTrustCache" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateTrustCache"
 
         iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
         if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
@@ -231,8 +229,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
         if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
-        if k == "RestoreRamDisk" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateRamDisk"
-        if k == "RestoreTrustCache" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateTrustCache"
+        if k == "RestoreRamDisk": k = "UpdateRamDisk"
+        if k == "RestoreTrustCache": k = "UpdateTrustCache"
 
         iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
         if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
@@ -277,7 +275,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             if k == "UpdateRamdisk": k = "UpdateRamDisk"
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
-            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
+            if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache": continue
             if k == "KernelCache": k = "Kernelcache"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
