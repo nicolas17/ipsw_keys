@@ -184,10 +184,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     try:
         identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Erase")
     except StopIteration:
-        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        print("Error: Could not find restore identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
     if identity == None:
-        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        print("Error: Could not find restore identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
 
     maxlen = 11
@@ -213,10 +213,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     try:
         identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Update")
     except StopIteration:
-        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        print("Error: Could not find update identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
     if identity == None:
-        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        print("Error: Could not find update identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
 
     maxlen = 11
