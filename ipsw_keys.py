@@ -346,6 +346,6 @@ if __name__ == "__main__":
         if re.match("iP\w+?[0-9a-z._,]+?[0-9.]+_[0-9]+[A-Z][0-9]+_Restore.ipsw", path.basename(inputName)):
             m = re.match("(iP\w+?[0-9a-z._,]+?[0-9.]+_[0-9]+[A-Z][0-9]+)_Restore.ipsw", path.basename(inputName))
             outputName = m.group(1) + "_Keys." + getext(outputType)
-        else: outputName = outputName + "/" + inputName + "_Keys." + getext(outputType)
+        else: outputName = outputName + "/" + inputName.replace(".ipsw", "") + "_Keys." + getext(outputType)
     
     extractKeys(inputName, outputName, outtype=outputType, delete=inputDevice != None, infodict=infoDict)
