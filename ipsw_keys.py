@@ -182,7 +182,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     output = {}
 
     try:
-        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid)
+        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Erase")
     except StopIteration:
         print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
@@ -201,8 +201,38 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
-        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or k == "RestoreRamDisk" or k == "KernelCache"): continue
-        if k == "OS": k = "RootFS"
+        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if k == "RestoreRamDisk" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateRamDisk"
+        if k == "RestoreTrustCache" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateTrustCache"
+
+        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
+        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
+        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
+    
+    try:
+        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Update")
+    except StopIteration:
+        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+    if identity == None:
+        print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+
+    maxlen = 11
+    if outtype == 2: 
+        for k in identity["Manifest"].keys(): 
+            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
+            maxlen = max(maxlen, len(k) + (4 if "SEP" in k else 3))
+    
+    for k,v in identity["Manifest"].items():
+        if not "Path" in v["Info"].keys(): continue
+        if k == "OS":
+            output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
+            continue
+        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if k == "RestoreRamDisk" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateRamDisk"
+        if k == "RestoreTrustCache" and identity["Info"]["RestoreBehavior"] == "Update": k = "UpdateTrustCache"
 
         iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
         if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
@@ -213,11 +243,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     
     if "Restore.plist" in zip.namelist():
         restore = plistlib.readPlistFromString(zip.read("Restore.plist"))
-        ProductType = restore["ProductType"]
-        if "Update" in restore["RestoreRamDisks"].keys():
-            iv, key = getKeybag(zip.read(restore["RestoreRamDisks"]["Update"]), k)
-            if iv == None: output[k] = {"Path": restore["RestoreRamDisks"]["Update"], "Encrypted": False}
-            else: output[k] = {"Path": restore["RestoreRamDisks"]["Update"], "Encrypted": True, "IV": iv, "Key": key}
+        if "ProductType" in restore.keys(): ProductType = restore["ProductType"]
 
     zip.close()
 
@@ -236,6 +262,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
             if k not in output.keys(): continue
             v = output[k]
+            if k == "RestoreRamDisk": k = "RestoreRamdisk"
+            if k == "UpdateRamDisk": k = "UpdateRamdisk"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = " + v["IV"] + "\n")
@@ -245,12 +273,12 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                 file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = ?\n\n")
             else:
                 file.write(" | " + k + ("Key" if k == "RootFS" else "IV") + (" " * (maxlen - len(k) - (3 if k == "RootFS" else 2))) + " = Not Encrypted\n\n")
+            if k == "RestoreRamdisk": k = "RestoreRamDisk"
+            if k == "UpdateRamdisk": k = "UpdateRamDisk"
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
             if k == "KernelCache": k = "Kernelcache"
-            if k == "RestoreRamDisk": k = "RestoreRamdisk"
-            if k == "UpdateRamDisk": k = "UpdateRamdisk"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
