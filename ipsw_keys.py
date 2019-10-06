@@ -154,6 +154,13 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     if identity == None:
         print("Could not find identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
+
+    maxlen = 11
+    if outtype == 2: 
+        for k in identity["Manifest"].keys(): 
+            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
+            maxlen = max(maxlen, len(k) + (4 if "SEP" in k else 3))
+    
     for k,v in identity["Manifest"].items():
         if not "Path" in v["Info"].keys(): continue
         if k == "OS":
@@ -189,24 +196,25 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     elif outtype == 1: file.write(plistlib.writePlistToString(output))
     else:
         file.write("""{}keys
- | Version                 = {}
- | Build                   = {}
- | Device                  = {}
- | Codename                = {}
- | DownloadURL             = {}
+ | Version{} = {}
+ | Build{} = {}
+ | Device{} = {}
+ | Codename{} = {}
+ | DownloadURL{} = {}
 
-""".format("{{", manifest["ProductVersion"], manifest["ProductBuildVersion"], infodict["identifier"] if infodict != None else "?", identity["Info"]["BuildTrain"], infodict["url"] if infodict != None else "?"))
+""".format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else "?", " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
         for k,v in output.items():
-            file.write(" | " + k + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
+            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
+            file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
-                    file.write(" | " + k + "IV = Unknown\n | " + k + "Key = Unknown\n")
-                    file.write(" | " + k + "KBAG = " + v["KBAG"] + "\n\n")
+                    file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = Unknown\n | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = Unknown\n")
+                    file.write(" | " + k + "KBAG" + (" " * (maxlen - len(k) - 4)) + " = " + v["KBAG"] + "\n\n")
                 else:
-                    file.write(" | " + k + "IV = " + v["IV"] + "\n")
-                    file.write(" | " + k + "Key = " + v["Key"] + "\n\n")
+                    file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = " + v["IV"] + "\n")
+                    file.write(" | " + k + "Key" + (" " * (maxlen - len(k) - 3)) + " = " + v["Key"] + "\n\n")
             else:
-                file.write(" | " + k + "IV = Not Encrypted\n\n")
+                file.write(" | " + k + "IV" + (" " * (maxlen - len(k) - 2)) + " = Not Encrypted\n\n")
         file.write("}}")
     file.close()
 
