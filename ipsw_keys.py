@@ -214,6 +214,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
+            if k == "KernelCache": k = "Kernelcache"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
