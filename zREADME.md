@@ -29,6 +29,7 @@ Optional arguments:
 ### Notes
 * Only IMG4 files are supported at the moment. This means only A7+ IPSWs can be used until I add IMG3 support.
 * If you specify `-d` without `-v`, all iOS versions will be downloaded. **THIS WILL TAKE A LONG TIME!**
+* This will not get the keys for the RootFS before 10.0 since it was stored in a different non-IMG4 format that I can't parse. These keys are mostly available on the iPhone Wiki anyway, so it shouldn't matter too much; plus, iOS 10 and later don't encrypt the RootFS at all.
 * The output JSON and plist files will be in a format similar to this:
 ```json
 {
