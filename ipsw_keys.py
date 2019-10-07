@@ -145,12 +145,13 @@ def getKeybag(der, k):
         if kbag == None: return (None, None)
         ivenc = kbag[:16]
         keyenc = kbag[16:]
+        keys = None
         if 'PWND:[checkm8]' in serial_number:
             pwned = usbexec.PwnedUSBDevice()
             keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
         else:
             device = dfuexec.PwnedDFUDevice()
-            keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
+            keys = device.aes((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY).encode("hex")
         return (keys[:32], keys[32:])
     else:
         dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
@@ -257,6 +258,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
  | DownloadURL{} = {}
 
 """.format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?"), " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
+        output["GlyphPlugin"] = output["BatteryPlugin"]
+        del output["BatteryPlugin"]
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
             if k not in output.keys(): continue
             v = output[k]
@@ -275,8 +278,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             if k == "UpdateRamdisk": k = "UpdateRamDisk"
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
-            if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache": continue
+            if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache" or k == "RestoreLogo": continue
             if k == "KernelCache": k = "Kernelcache"
+            if k == "SEP": k = "SEPFirmware"
+            if k == "RecoveryLogo": k = "RecoveryMode"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
