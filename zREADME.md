@@ -5,7 +5,7 @@
 
 ## Usage
 ```
-Usage: ipsw_key.py <-i <input>|-d <identifier>> [-ajpw] [-v version] [options] [-a] [-o <output>]
+Usage: ipsw_key.py <-i <input>|-d <identifier>> [-ajpw] [-v <version>] [-b <bdid>] [options] [-a] [-o <output>]
 Extracts iOS encryption keys from an IPSW using a physical device's AES engine.
 
 Required arguments:
@@ -15,6 +15,7 @@ Required arguments:
     
 Optional arguments:
     -a, --auto-name              Automatically name output based on version and device, and save in folder at <output> if specified
+    -b, --bdid <bdid>            Use a custom board ID instead of the current device's BDID
     -h, --help                   Show this help prompt
     -j, --json                   Store output as JSON file
     -p, --plist                  Store output as property list file

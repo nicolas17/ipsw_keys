@@ -58,7 +58,7 @@ def asn1_get_value_of_type(der,(ixs,ixf,ixl),asn1_type):
 	'SEQUENCE':          0x70,	'SET':               0x71,
 	'PrintableString':   0x13,	'IA5String':         0x16,
 	'UTCTime':           0x17,	'ENUMERATED':        0x0A,
-	'UTF8String':        0x0C,	'PrintableString':   0x13,
+	'UTF8String':        0x0C,
 	}
 	if asn1_type_table[asn1_type] != ord(der[ixs]):
 		raise ValueError('Error: Expected type was: '+
@@ -132,11 +132,12 @@ def getInfo():
         print("Could not find CPID in serial")
         exit(4)
     cpid = cpid_m.group(1)
-    bdid_m = re.search("BDID:([0-9A-F][0-9A-F])", serial_number)
-    if bdid_m == None:
-        print("Could not find BDID in serial")
-        exit(4)
-    bdid = bdid_m.group(1)
+    if bdid == None:
+        bdid_m = re.search("BDID:([0-9A-F][0-9A-F])", serial_number)
+        if bdid_m == None:
+            print("Could not find BDID in serial")
+            exit(4)
+        bdid = bdid_m.group(1)
     dfu.release_device(dev)
 
 def getKeybag(der, k):
@@ -281,7 +282,6 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache" or k == "RestoreLogo": continue
             if k == "KernelCache": k = "Kernelcache"
             if k == "SEP": k = "SEPFirmware"
-            if k == "RecoveryLogo": k = "RecoveryMode"
             file.write(" | " + k + (" " * (maxlen - len(k))) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
@@ -302,7 +302,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Keys saved to " + outfile)
 
 def usage():
-    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v version] [options] [-a] [-o <output>]")
+    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v <version>] [-b <bdid>] [options] [-a] [-o <output>]")
     print("Extracts iOS encryption keys from an IPSW using a physical device's AES engine.")
     print("")
     print("Required arguments:")
@@ -312,6 +312,7 @@ def usage():
     print("")
     print("Optional arguments:")
     print("    -a, --auto-name              Automatically name output based on version and device, and save in folder at <output> if specified")
+    print("    -b, --bdid <BDID>|*          Use a custom board ID instead of the current device's BDID")
     print("    -h, --help                   Show this help prompt")
     print("    -j, --json                   Store output as JSON file")
     print("    -p, --plist                  Store output as property list file")
@@ -328,7 +329,7 @@ if __name__ == "__main__":
         usage()
         exit(0)
     
-    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpw", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help"])
+    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpwb:", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help", "bdid="])
     inputName = None
     inputDevice = None
     inputVersion = None
@@ -364,6 +365,8 @@ if __name__ == "__main__":
         elif o == "-h" or o == "--help":
             usage()
             exit(0)
+        elif o == "-b" or o == "--bdid":
+            bdid = a
     
     if outputType == None: outputType = 0
     if inputName == None and inputDevice == None:
