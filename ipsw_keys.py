@@ -268,9 +268,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
         def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('NAP','nAP')
 
-        file.write(" | {} = {}".format('Model'.ljust(maxlen), niceBoardConfig(identity["Info"]["DeviceClass"])))
+        file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(identity["Info"]["DeviceClass"])))
         if altOutput:
-            file.write(" | {} = {}".format('Model2'.ljust(maxlen), niceBoardConfig(otherDevices[0]["Info"]["DeviceClass"])))
+            file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(otherDevices[0]["Info"]["DeviceClass"])))
+        file.write("\n")
 
         del output["BatteryPlugin"]
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
