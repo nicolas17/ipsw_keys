@@ -177,7 +177,7 @@ def getIdentity(manifest, restoreBehavior, identityType):
 
     return identity
 
-def convertKeys(identity, identityType):
+def convertKeys(identity, identityType, kbagOnly=False):
     output = {}
 
     for k,v in identity["Manifest"].items():
@@ -194,7 +194,7 @@ def convertKeys(identity, identityType):
         if kbag == None:
             output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
         else:
-            if 'SEP' in k:
+            if 'SEP' in k or kbagOnly:
                 output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": str(kbag).encode('hex')}
             else:
                 iv,key = getKeysFromDevice(kbag)
@@ -218,6 +218,15 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Found {} other devices:".format(len(otherDevices)))
     for dev in otherDevices:
         print("  bdid {} cpid {} boardconfig {}".format(item["ApBoardID"], item["ApChipID"], item["Info"]["DeviceClass"]))
+
+    if len(otherDevices) == 1:
+        altOutput = convertKeys(otherDevices[0], 'restore', kbagOnly=True)
+        for k,v in altOutput.items():
+            if v['Path'] != output[k]['Path']:
+                output[k+"2"] = v
+    elif len(otherDevices) > 1:
+        print("error: expected to get only one 'other device'")
+        exit(6)
 
     ProductType = None
     
@@ -268,6 +277,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                 wk = "Kernelcache"
             elif k == "SEP":
                 wk = "SEPFirmware"
+            elif k == "SEP2":
+                wk = "SEPFirmware2"
             else:
                 wk = k
 
