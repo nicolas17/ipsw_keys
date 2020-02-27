@@ -175,6 +175,34 @@ def getKeybag(der, k):
                 keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
             return (keys[:32], keys[32:])
 
+def convertKeys(manifest, restoreBehavior, identityType):
+    output = {}
+    try:
+        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == RestoreBehavior)
+    except StopIteration:
+        print("Error: Could not find " + identityType + " identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+    if identity == None:
+        print("Error: Could not find " + identityType + " identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
+        exit(5)
+
+    for k,v in identity["Manifest"].items():
+        if not "Path" in v["Info"].keys(): continue
+        if k == "OS":
+            output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
+            continue
+        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if identityType == 'update':
+            if k == "RestoreRamDisk": k = "UpdateRamDisk"
+            if k == "RestoreTrustCache": k = "UpdateTrustCache"
+
+        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
+        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
+        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
+
+    return output
+
 def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Reading manifest...")
     zip = zipfile.ZipFile(infile)
@@ -182,62 +210,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     print("Reading keys...")
     output = {}
-
-    try:
-        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Erase")
-    except StopIteration:
-        print("Error: Could not find restore identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-        exit(5)
-    if identity == None:
-        print("Error: Could not find restore identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-        exit(5)
-
     maxlen = 11
-    if outtype == 2: 
-        for k in identity["Manifest"].keys(): 
-            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
-            maxlen = max(maxlen, len(k) + (4 if "SEP" in k else 3))
-    
-    for k,v in identity["Manifest"].items():
-        if not "Path" in v["Info"].keys(): continue
-        if k == "OS":
-            output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
-            continue
-        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
 
-        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
-        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
-        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
-        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
-    
-    try:
-        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == "Update")
-    except StopIteration:
-        print("Error: Could not find update identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-        exit(5)
-    if identity == None:
-        print("Error: Could not find update identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
-        exit(5)
-
-    maxlen = 11
-    if outtype == 2: 
-        for k in identity["Manifest"].keys(): 
-            if k == "RestoreSEP" or k == "RestoreDeviceTree": continue
-            maxlen = max(maxlen, len(k) + (4 if "SEP" in k else 3))
-    
-    for k,v in identity["Manifest"].items():
-        if not "Path" in v["Info"].keys(): continue
-        if k == "OS":
-            output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
-            continue
-        if not (v["Info"]["Path"].endswith("im4p") or v["Info"]["Path"].endswith("img3") or v["Info"]["Path"].endswith("trustcache") or v["Info"]["Path"].endswith("dmg") or k == "RestoreRamDisk" or k == "KernelCache"): continue
-        if k == "RestoreRamDisk": k = "UpdateRamDisk"
-        if k == "RestoreTrustCache": k = "UpdateTrustCache"
-
-        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
-        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
-        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
-        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
+    output.update(convertKeys(manifest, 'Erase', 'restore'))
+    output.update(convertKeys(manifest, 'Update', 'update'))
 
     ProductType = None
     
