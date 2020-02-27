@@ -216,6 +216,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         identity = getIdentity(manifest, restoreBehavior, identityType)
         output.update(convertKeys(zip, identity, identityType))
 
+    boardConfig = identity["Info"]["DeviceClass"]
+    boardConfig2 = None
+
     otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
     for dev in otherDevices:
@@ -223,9 +226,11 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     if len(otherDevices) == 1:
         altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
-        shouldSwap = any(identity["Info"]["DeviceClass"].endswith(suffix) for suffix in ('uap','map'))
+        boardConfig2 = otherDevices[0]["Info"]["DeviceClass"]
+        shouldSwap = any(boardConfig.endswith(suffix) for suffix in ('uap','map'))
         if shouldSwap:
-            print("Main model is {}, secondary model is {}, let's swap them".format(identity["Info"]["DeviceClass"], otherDevices[0]["Info"]["DeviceClass"]))
+            print("Main model is {}, secondary model is {}, let's swap them".format(boardConfig, boardConfig2))
+            (boardConfig, boardConfig2) = (boardConfig2, boardConfig)
 
         for k,v in altOutput.items():
             if k in ('RestoreSEP','RestoreDeviceTree'): continue
@@ -268,9 +273,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
         def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('NAP','nAP')
 
-        file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(identity["Info"]["DeviceClass"])))
-        if altOutput:
-            file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(otherDevices[0]["Info"]["DeviceClass"])))
+        file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(boardConfig)))
+        if boardConfig2:
+            file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(boardConfig2)))
         file.write("\n")
 
         del output["BatteryPlugin"]
