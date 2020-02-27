@@ -212,7 +212,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     maxlen = 11
 
     for (restoreBehavior, identityType) in (('Erase','restore'), ('Update','update')):
-        output.update(convertKeys(zip, getIdentity(manifest, restoreBehavior, identityType), identityType))
+        identity = getIdentity(manifest, restoreBehavior, identityType), identityType)
+        output.update(convertKeys(zip, identity, identityType))
 
     otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
