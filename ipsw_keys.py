@@ -165,8 +165,7 @@ def getKeysFromDevice(keybag):
     return (keys[:32], keys[32:])
 
 
-def convertKeys(manifest, restoreBehavior, identityType):
-    output = {}
+def getIdentity(manifest, restoreBehavior, identityType):
     try:
         identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == RestoreBehavior)
     except StopIteration:
@@ -175,6 +174,11 @@ def convertKeys(manifest, restoreBehavior, identityType):
     if identity == None:
         print("Error: Could not find " + identityType + " identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
+
+    return identity
+
+def convertKeys(identity, identityType):
+    output = {}
 
     for k,v in identity["Manifest"].items():
         if not "Path" in v["Info"].keys(): continue
@@ -207,8 +211,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     output = {}
     maxlen = 11
 
-    output.update(convertKeys(manifest, 'Erase', 'restore'))
-    output.update(convertKeys(manifest, 'Update', 'update'))
+    for (restoreBehavior, identityType) in (('Erase','restore'), ('Update','update')):
+        output.update(convertKeys(getIdentity(manifest, restoreBehavior, identityType), identityType))
 
     otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
