@@ -222,10 +222,18 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     if len(otherDevices) == 1:
         altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
+        shouldSwap = any(identity["Info"]["DeviceClass"].endswith(suffix) for suffix in ('uap','map'))
+        if shouldSwap:
+            print("Main model is {}, secondary model is {}, let's swap them".format(identity["Info"]["DeviceClass"], otherDevices[0]["Info"]["DeviceClass"]))
+
         for k,v in altOutput.items():
             if k in ('RestoreSEP','RestoreDeviceTree'): continue
             if v['Path'] != output[k]['Path']:
-                output[k+"2"] = v
+                if shouldSwap:
+                    output[k+'2'] = output[k]
+                    output[k] = v
+                else:
+                    output[k+'2'] = v
     elif len(otherDevices) > 1:
         print("error: expected to get only one 'other device'")
         exit(6)
