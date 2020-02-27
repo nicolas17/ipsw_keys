@@ -218,7 +218,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
     for dev in otherDevices:
-        print("  bdid {} cpid {} boardconfig {}".format(item["ApBoardID"], item["ApChipID"], item["Info"]["DeviceClass"]))
+        print("  bdid {} cpid {} boardconfig {}".format(dev["ApBoardID"], dev["ApChipID"], dev["Info"]["DeviceClass"]))
 
     if len(otherDevices) == 1:
         altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
