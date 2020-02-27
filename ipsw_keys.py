@@ -167,7 +167,7 @@ def getKeysFromDevice(keybag):
 
 def getIdentity(manifest, restoreBehavior, identityType):
     try:
-        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == RestoreBehavior)
+        identity = next(item for item in manifest["BuildIdentities"] if item["ApChipID"] == "0x" + cpid and item["ApBoardID"] == "0x" + bdid and item["Info"]["RestoreBehavior"] == restoreBehavior)
     except StopIteration:
         print("Error: Could not find " + identityType + " identity for CPID " + cpid + " and BDID " + bdid + " in manifest")
         exit(5)
