@@ -140,40 +140,30 @@ def getInfo():
         bdid = bdid_m.group(1)
     dfu.release_device(dev)
 
-def getKeybag(der, k):
+def getRawKeybag(der, k):
     if der[:4] == "3gmI":
         kbag = image3.Image3(der).getKeybag()
-        if kbag == None: return (None, None)
-        ivenc = kbag[:16]
-        keyenc = kbag[16:]
-        keys = None
-        if 'PWND:[checkm8]' in serial_number:
-            pwned = usbexec.PwnedUSBDevice()
-            keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
-        else:
-            device = dfuexec.PwnedDFUDevice()
-            keys = device.aes((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY).encode("hex")
-        return (keys[:32], keys[32:])
+        return kbag # may be None
     else:
         dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
         if dec[2] >= len(der) - 4:
-            return (None, None)
+            return None
         kbag = asn1_get_value(der, asn1_node_next(der, dec))
         dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
         ivenc = asn1_get_value(kbag, dec)
         keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
-        keys = None
 
-        if "SEP" in k:
-            return ("KBAG", str(ivenc + keyenc).encode('hex'))
-        else:
-            if 'PWND:[checkm8]' in serial_number:
-                pwned = usbexec.PwnedUSBDevice()
-                keys = pwned.aes((ivenc + keyenc), usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
-            else:
-                device = dfuexec.PwnedDFUDevice()
-                keys = device.aes_hex((ivenc + keyenc), dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY)
-            return (keys[:32], keys[32:])
+        return (ivenc + keyenc)
+
+def getKeysFromDevice(keybag):
+    if 'PWND:[checkm8]' in serial_number:
+        pwned = usbexec.PwnedUSBDevice()
+        keys = pwned.aes(keybag, usbexec.AES_DECRYPT, usbexec.AES_GID_KEY).encode('hex')
+    else:
+        device = dfuexec.PwnedDFUDevice()
+        keys = device.aes(keybag, dfuexec.AES_DECRYPT, dfuexec.AES_GID_KEY).encode("hex")
+    return (keys[:32], keys[32:])
+
 
 def convertKeys(manifest, restoreBehavior, identityType):
     output = {}
@@ -196,10 +186,15 @@ def convertKeys(manifest, restoreBehavior, identityType):
             if k == "RestoreRamDisk": k = "UpdateRamDisk"
             if k == "RestoreTrustCache": k = "UpdateTrustCache"
 
-        iv, key = getKeybag(zip.read(v["Info"]["Path"]), k)
-        if iv == None: output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
-        elif iv == "KBAG": output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": key}
-        else: output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
+        kbag = getRawKeybag(zip.read(v["Info"]["Path"]), k)
+        if kbag == None:
+            output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+        else:
+            if 'SEP' in k:
+                output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "KBAG": str(kbag).encode('hex')}
+            else:
+                iv,key = getKeysFromDevice(kbag)
+                output[k] = {"Path": v["Info"]["Path"], "Encrypted": True, "IV": iv, "Key": key}
 
     return output
 
