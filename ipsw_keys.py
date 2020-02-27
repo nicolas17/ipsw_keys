@@ -223,6 +223,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     if len(otherDevices) == 1:
         altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
         for k,v in altOutput.items():
+            if k in ('RestoreSEP','RestoreDeviceTree'): continue
             if v['Path'] != output[k]['Path']:
                 output[k+"2"] = v
     elif len(otherDevices) > 1:
