@@ -177,7 +177,7 @@ def getIdentity(manifest, restoreBehavior, identityType):
 
     return identity
 
-def convertKeys(identity, identityType, kbagOnly=False):
+def convertKeys(zipfile, identity, identityType, kbagOnly=False):
     output = {}
 
     for k,v in identity["Manifest"].items():
@@ -190,7 +190,7 @@ def convertKeys(identity, identityType, kbagOnly=False):
             if k == "RestoreRamDisk": k = "UpdateRamDisk"
             if k == "RestoreTrustCache": k = "UpdateTrustCache"
 
-        kbag = getRawKeybag(zip.read(v["Info"]["Path"]))
+        kbag = getRawKeybag(zipfile.read(v["Info"]["Path"]))
         if kbag == None:
             output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
         else:
@@ -212,7 +212,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     maxlen = 11
 
     for (restoreBehavior, identityType) in (('Erase','restore'), ('Update','update')):
-        output.update(convertKeys(getIdentity(manifest, restoreBehavior, identityType), identityType))
+        output.update(convertKeys(zip, getIdentity(manifest, restoreBehavior, identityType), identityType))
 
     otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
@@ -220,7 +220,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         print("  bdid {} cpid {} boardconfig {}".format(item["ApBoardID"], item["ApChipID"], item["Info"]["DeviceClass"]))
 
     if len(otherDevices) == 1:
-        altOutput = convertKeys(otherDevices[0], 'restore', kbagOnly=True)
+        altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
         for k,v in altOutput.items():
             if v['Path'] != output[k]['Path']:
                 output[k+"2"] = v
