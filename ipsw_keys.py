@@ -209,6 +209,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     print("Reading keys...")
     output = {}
+    altOutput = None
     maxlen = 11
 
     for (restoreBehavior, identityType) in (('Erase','restore'), ('Update','update')):
@@ -264,6 +265,13 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
 """.format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?"), " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
         output["GlyphPlugin"] = output["BatteryPlugin"]
+
+        def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('NAP','nAP')
+
+        file.write(" | {} = {}".format('Model'.ljust(maxlen), niceBoardConfig(identity["Info"]["DeviceClass"])))
+        if altOutput:
+            file.write(" | {} = {}".format('Model2'.ljust(maxlen), niceBoardConfig(otherDevices[0]["Info"]["DeviceClass"])))
+
         del output["BatteryPlugin"]
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
             if k not in output.keys(): continue
