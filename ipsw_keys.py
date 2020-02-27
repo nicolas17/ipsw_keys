@@ -140,7 +140,7 @@ def getInfo():
         bdid = bdid_m.group(1)
     dfu.release_device(dev)
 
-def getRawKeybag(der, k):
+def getRawKeybag(der):
     if der[:4] == "3gmI":
         kbag = image3.Image3(der).getKeybag()
         return kbag # may be None
@@ -190,7 +190,7 @@ def convertKeys(identity, identityType, kbagOnly=False):
             if k == "RestoreRamDisk": k = "UpdateRamDisk"
             if k == "RestoreTrustCache": k = "UpdateTrustCache"
 
-        kbag = getRawKeybag(zip.read(v["Info"]["Path"]), k)
+        kbag = getRawKeybag(zip.read(v["Info"]["Path"]))
         if kbag == None:
             output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
         else:
