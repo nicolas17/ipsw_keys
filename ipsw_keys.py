@@ -244,34 +244,43 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
             if k not in output.keys(): continue
             v = output[k]
-            if k == "RestoreRamDisk": k = "RestoreRamdisk"
-            if k == "UpdateRamDisk": k = "UpdateRamdisk"
-            file.write(" | " + k.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
-            if v["Encrypted"]:
-                file.write(" | " + (k + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
-                file.write(" | " + (k + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
-            elif k == "RootFS" and manifest["ProductVersion"][0] != "1":
-                file.write(" | " + (k + "IV").ljust(maxlen) + " = ?\n")
-                file.write(" | " + (k + "Key").ljust(maxlen) + " = ?\n\n")
+            if k == "RestoreRamDisk":
+                wk = "RestoreRamdisk"
+            elif k == "UpdateRamDisk":
+                wk = "UpdateRamdisk"
             else:
-                file.write(" | " + (k + ("Key" if k == "RootFS" else "IV")).ljust(maxlen) + " = Not Encrypted\n\n")
-            if k == "RestoreRamdisk": k = "RestoreRamDisk"
-            if k == "UpdateRamdisk": k = "UpdateRamDisk"
+                wk = k
+
+            file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
+            if v["Encrypted"]:
+                file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
+                file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
+            elif k == "RootFS" and manifest["ProductVersion"][0] != "1":
+                file.write(" | " + (wk + "IV").ljust(maxlen) + " = ?\n")
+                file.write(" | " + (wk + "Key").ljust(maxlen) + " = ?\n\n")
+            else:
+                file.write(" | " + (wk + ("Key" if wk == "RootFS" else "IV")).ljust(maxlen) + " = Not Encrypted\n\n")
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache" or k == "RestoreLogo": continue
-            if k == "KernelCache": k = "Kernelcache"
-            if k == "SEP": k = "SEPFirmware"
-            file.write(" | " + k.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
+
+            if k == "KernelCache":
+                wk = "Kernelcache"
+            elif k == "SEP":
+                wk = "SEPFirmware"
+            else:
+                wk = k
+
+            file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
-                    file.write(" | " + (k + "IV").ljust(maxlen) + " = Unknown\n | " + (k + "Key").ljust(maxlen) + " = Unknown\n")
-                    file.write(" | " + (k + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n\n")
+                    file.write(" | " + (wk + "IV").ljust(maxlen) + " = Unknown\n | " + (wk + "Key").ljust(maxlen) + " = Unknown\n")
+                    file.write(" | " + (wk + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n\n")
                 else:
-                    file.write(" | " + (k + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
-                    file.write(" | " + (k + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
+                    file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
+                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
             else:
-                file.write(" | " + (k + "IV").ljust(maxlen) + " = Not Encrypted\n\n")
+                file.write(" | " + (wk + "IV").ljust(maxlen) + " = Not Encrypted\n\n")
         file.write("}}")
     file.close()
 
