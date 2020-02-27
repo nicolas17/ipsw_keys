@@ -242,7 +242,10 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     
     if "Restore.plist" in zip.namelist():
         restore = plistlib.readPlistFromString(zip.read("Restore.plist"))
-        if "ProductType" in restore.keys(): ProductType = restore["ProductType"]
+        if "ProductType" in restore.keys():
+            ProductType = restore["ProductType"]
+        elif "SupportedProductTypes" in restore.keys() and len(restore["SupportedProductTypes"]) == 1:
+            ProductType = restore["SupportedProductTypes"][0]
 
     maxlen = max(maxlen, max(len(k) for k in output.keys())) + 4
 
