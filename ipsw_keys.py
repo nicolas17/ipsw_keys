@@ -261,14 +261,14 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     if outtype == 0: json.dump(output, file)
     elif outtype == 1: file.write(plistlib.writePlistToString(output))
     else:
-        file.write("""{}keys
- | Version{} = {}
- | Build{} = {}
- | Device{} = {}
- | Codename{} = {}
- | DownloadURL{} = {}
+        file.write("{{keys\n")
+        file.write(" | {} = {}\n".format("Version".ljust(maxlen), manifest["ProductVersion"]))
+        file.write(" | {} = {}\n".format("Build".ljust(maxlen), manifest["ProductBuildVersion"]))
+        file.write(" | {} = {}\n".format("Device".ljust(maxlen), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?")))
+        file.write(" | {} = {}\n".format("Codename".ljust(maxlen), identity["Info"]["BuildTrain"]))
+        file.write(" | {} = {}\n".format("DownloadURL".ljust(maxlen), infodict["url"] if infodict != None else "?"))
+        file.write("\n")
 
-""".format("{{", " " * (maxlen - 7), manifest["ProductVersion"], " " * (maxlen - 5), manifest["ProductBuildVersion"], " " * (maxlen - 6), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?"), " " * (maxlen - 8), identity["Info"]["BuildTrain"], " " * (maxlen - 11), infodict["url"] if infodict != None else "?"))
         output["GlyphPlugin"] = output["BatteryPlugin"]
 
         def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('NAP','nAP')
