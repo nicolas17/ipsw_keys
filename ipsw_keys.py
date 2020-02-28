@@ -185,7 +185,7 @@ def convertKeys(zipfile, identity, identityType, kbagOnly=False):
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
-        if not (any(v["Info"]["Path"].endswith(suffix) for suffix in ("im4p", "img3", "trustcache", "dmg", "bbfw")) or k == "RestoreRamDisk" or k == "KernelCache"): continue
+        if not (any(v["Info"]["Path"].endswith(suffix) for suffix in ("im4p", "img3", "trustcache", "dmg")) or k == "RestoreRamDisk" or k == "KernelCache"): continue
         if identityType == 'update':
             if k == "RestoreRamDisk": k = "UpdateRamDisk"
             if k == "RestoreTrustCache": k = "UpdateTrustCache"
