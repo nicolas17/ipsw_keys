@@ -266,6 +266,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         file.write(" | {} = {}\n".format("Build".ljust(maxlen), manifest["ProductBuildVersion"]))
         file.write(" | {} = {}\n".format("Device".ljust(maxlen), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?")))
         file.write(" | {} = {}\n".format("Codename".ljust(maxlen), identity["Info"]["BuildTrain"]))
+        if 'BasebandFirmware' in identity["Manifest"]:
+            file.write(" | {} = {}\n".format("Baseband".ljust(maxlen), re.sub(r'^Firmware/.*-([0-9.]+)\.\w+\.bbfw$', r'\1', identity["Manifest"]["BasebandFirmware"]["Info"]["Path"])))
         file.write(" | {} = {}\n".format("DownloadURL".ljust(maxlen), infodict["url"] if infodict != None else "?"))
         file.write("\n")
 
