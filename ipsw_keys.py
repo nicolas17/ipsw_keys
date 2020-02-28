@@ -118,6 +118,7 @@ def asn1_read_length(der,ix):
 serial_number = None
 cpid = None
 bdid = None
+deviceIdentifier = None
 
 def getInfo():
     global serial_number, cpid, bdid
@@ -246,7 +247,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     ProductType = None
     
-    if "Restore.plist" in zip.namelist():
+    if deviceIdentifier is not None:
+        ProductType = deviceIdentifier
+    elif "Restore.plist" in zip.namelist():
         restore = plistlib.readPlistFromString(zip.read("Restore.plist"))
         if "ProductType" in restore.keys():
             ProductType = restore["ProductType"]
@@ -333,7 +336,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     print("Keys saved to " + outfile)
 
 def usage():
-    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v <version>] [-b <bdid>] [options] [-a] [-o <output>]")
+    print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v <version>] [-b <bdid>] [options] [-a] [-o <output>] [-m <model>]")
     print("Extracts iOS encryption keys from an IPSW using a physical device's AES engine.")
     print("")
     print("Required arguments:")
@@ -349,6 +352,7 @@ def usage():
     print("    -p, --plist                  Store output as property list file")
     print("    -v, --version <version>      Version of iOS to download (without this, downloads all versions and implies -a)")
     print("    -w, --wiki                   Format output for iPhone Wiki upload")
+    print("    -m, --model <model>          Device model (like iPhone8,4) to include in wiki format")
 
 def getext(t):
     if t == 0: return "json"
@@ -360,7 +364,7 @@ if __name__ == "__main__":
         usage()
         exit(0)
     
-    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpwb:", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help", "bdid="])
+    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpwb:m:", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help", "bdid=", "model="])
     inputName = None
     inputDevice = None
     inputVersion = None
@@ -398,6 +402,8 @@ if __name__ == "__main__":
             exit(0)
         elif o == "-b" or o == "--bdid":
             bdid = a
+        elif o == "-m" or o == "--model":
+            deviceIdentifier = a
     
     if outputType == None: outputType = 0
     if inputName == None and inputDevice == None:
