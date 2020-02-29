@@ -275,6 +275,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         file.write("\n")
 
         output["GlyphPlugin"] = output["BatteryPlugin"]
+        if 'BatteryPlugin2' in output:
+            output["GlyphPlugin2"] = output["BatteryPlugin2"]
 
         def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('MAP','mAP')
 
@@ -284,15 +286,14 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         file.write("\n")
 
         del output["BatteryPlugin"]
-        for k in ["RootFS", "UpdateRamDisk", "RestoreRamDisk"]:
+        for k in ["RootFS", "RootFS2", "UpdateRamDisk", "UpdateRamDisk2", "RestoreRamDisk", "RestoreRamDisk2"]:
             if k not in output.keys(): continue
             v = output[k]
-            if k == "RestoreRamDisk":
-                wk = "RestoreRamdisk"
-            elif k == "UpdateRamDisk":
-                wk = "UpdateRamdisk"
-            else:
-                wk = k
+            if k == "RestoreRamDisk": wk = "RestoreRamdisk"
+            elif k == "UpdateRamDisk": wk = "UpdateRamdisk"
+            elif k == "RestoreRamDisk2": wk = "RestoreRamdisk2"
+            elif k == "UpdateRamDisk2": wk = "UpdateRamdisk2"
+            else: wk = k
 
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
@@ -307,14 +308,11 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache" or k == "RestoreLogo": continue
 
-            if k == "KernelCache":
-                wk = "Kernelcache"
-            elif k == "SEP":
-                wk = "SEPFirmware"
-            elif k == "SEP2":
-                wk = "SEPFirmware2"
-            else:
-                wk = k
+            if k == "KernelCache": wk = "Kernelcache"
+            elif k == "KernelCache2": wk = "Kernelcache2"
+            elif k == "SEP": wk = "SEPFirmware"
+            elif k == "SEP2": wk = "SEPFirmware2"
+            else: wk = k
 
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
