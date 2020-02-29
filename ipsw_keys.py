@@ -312,6 +312,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             elif k == "KernelCache2": wk = "Kernelcache2"
             elif k == "SEP": wk = "SEPFirmware"
             elif k == "SEP2": wk = "SEPFirmware2"
+            elif k == "AOP": wk = "AOPFirmware"
+            elif k == "AOP2": wk = "AOPFirmware2"
+            elif k == "Liquid": wk = "LiquidDetect"
             else: wk = k
 
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
