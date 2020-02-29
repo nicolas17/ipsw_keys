@@ -228,7 +228,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     if len(otherDevices) == 1:
         altOutput = convertKeys(zip, otherDevices[0], 'restore', kbagOnly=True)
         boardConfig2 = otherDevices[0]["Info"]["DeviceClass"]
-        shouldSwap = any(boardConfig.endswith(suffix) for suffix in ('uap','map'))
+        shouldSwap = any(boardConfig.endswith(suffix) for suffix in ('uap','map','tap'))
         if shouldSwap:
             print("Main model is {}, secondary model is {}, let's swap them".format(boardConfig, boardConfig2))
             (boardConfig, boardConfig2) = (boardConfig2, boardConfig)
