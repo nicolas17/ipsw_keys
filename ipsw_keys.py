@@ -220,7 +220,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     boardConfig = identity["Info"]["DeviceClass"]
     boardConfig2 = None
 
-    otherDevices = [item for item in manifest["BuildIdentities"] if item["ApBoardID"] == "0x"+bdid and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
+    otherDevices = [item for item in manifest["BuildIdentities"] if re.sub(r'^([a-z][0-9]+)',r'\1',item["Info"]["DeviceClass"]) == re.sub(r'^([a-z][0-9]+)',r'\1',boardConfig) and item["ApChipID"] != "0x"+cpid and item["Info"]["RestoreBehavior"] == "Erase"]
     print("Found {} other devices:".format(len(otherDevices)))
     for dev in otherDevices:
         print("  bdid {} cpid {} boardconfig {}".format(dev["ApBoardID"], dev["ApChipID"], dev["Info"]["DeviceClass"]))
