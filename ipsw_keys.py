@@ -278,7 +278,14 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if 'BatteryPlugin2' in output:
             output["GlyphPlugin2"] = output["BatteryPlugin2"]
 
-        def niceBoardConfig(bc): return bc.upper().replace('UAP','uAP').replace('MAP','mAP')
+        def niceBoardConfig(bc):
+            return (bc.upper()
+                    .replace('UAP','uAP')
+                    .replace('MAP','mAP')
+                    .replace('SAP','sAP')
+                    .replace('TAP','tAP')
+                    .replace('BAP','bAP')
+            )
 
         file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(boardConfig)))
         if boardConfig2:
