@@ -304,8 +304,12 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
-                file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
-                file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
+                if "KBAG" in v.keys():
+                    file.write(" | " + (wk + "IV").ljust(maxlen) + " = Unknown\n | " + (wk + "Key").ljust(maxlen) + " = Unknown\n")
+                    file.write(" | " + (wk + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n\n")
+                else:
+                    file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
+                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
             elif k == "RootFS" and manifest["ProductVersion"][0] != "1":
                 file.write(" | " + (wk + "IV").ljust(maxlen) + " = ?\n")
                 file.write(" | " + (wk + "Key").ljust(maxlen) + " = ?\n\n")
