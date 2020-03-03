@@ -317,7 +317,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                 file.write(" | " + (wk + ("Key" if wk == "RootFS" else "IV")).ljust(maxlen) + " = Not Encrypted\n\n")
             del output[k]
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
-            if k == "RestoreSEP" or k == "RestoreDeviceTree" or k == "RestoreTrustCache" or k == "UpdateTrustCache" or k == "StaticTrustCache" or k == "RestoreLogo": continue
+            if k.replace('2','') in ("RestoreSEP", "RestoreDeviceTree", "RestoreTrustCache", "UpdateTrustCache", "StaticTrustCache", "RestoreLogo"): continue
 
             if k == "KernelCache": wk = "Kernelcache"
             elif k == "KernelCache2": wk = "Kernelcache2"
