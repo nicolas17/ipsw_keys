@@ -287,8 +287,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                     .replace('BAP','bAP')
             )
 
-        file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(boardConfig)))
         if boardConfig2:
+            file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(boardConfig)))
             file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(boardConfig2)))
         file.write("\n")
 
