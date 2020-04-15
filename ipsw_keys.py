@@ -290,7 +290,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         if boardConfig2:
             file.write(" | {} = {}\n".format('Model'.ljust(maxlen), niceBoardConfig(boardConfig)))
             file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(boardConfig2)))
-        file.write("\n")
+            file.write("\n")
 
         del output["BatteryPlugin"]
         for k in ["RootFS", "RootFS2", "UpdateRamDisk", "UpdateRamDisk2", "RestoreRamDisk", "RestoreRamDisk2"]:
