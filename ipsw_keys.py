@@ -149,7 +149,12 @@ def getRawKeybag(der):
         dec = asn1_node_next(der, asn1_node_next(der, asn1_node_next(der, asn1_node_first_child(der, asn1_node_root(der)))))
         if dec[2] >= len(der) - 4:
             return None
-        kbag = asn1_get_value(der, asn1_node_next(der, dec))
+        kbag_node = asn1_node_next(der, dec)
+        # make sure it's an OCTET STRING
+        if ord(der[kbag_node[0]]) != 0x4:
+            return None
+
+        kbag = asn1_get_value(der, kbag_node)
         dec = asn1_node_next(kbag, asn1_node_first_child(kbag, asn1_node_first_child(kbag, asn1_node_root(kbag))))
         ivenc = asn1_get_value(kbag, dec)
         keyenc = asn1_get_value(kbag, asn1_node_next(kbag, dec))
