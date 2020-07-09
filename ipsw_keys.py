@@ -261,6 +261,13 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
         elif "SupportedProductTypes" in restore.keys() and len(restore["SupportedProductTypes"]) == 1:
             ProductType = restore["SupportedProductTypes"][0]
 
+    # Add Maggie if the file exists in the zip
+    try:
+        zip.getinfo("Firmware/Maggie/AppleMaggieFirmwareImage.im4p")
+        output["AppleMaggie"] = {"Path": "Firmware/Maggie/AppleMaggieFirmwareImage.im4p", "Encrypted": False}
+    except KeyError:
+        pass
+
     maxlen = max(maxlen, max(len(k) for k in output.keys())) + 4
 
     zip.close()
