@@ -119,6 +119,7 @@ serial_number = None
 cpid = None
 bdid = None
 deviceIdentifier = None
+versionMap = {}
 
 def getInfo():
     global serial_number, cpid, bdid
@@ -276,8 +277,11 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
     if outtype == 0: json.dump(output, file)
     elif outtype == 1: file.write(plistlib.writePlistToString(output))
     else:
+        # use manifest["ProductVersion"] unless the build ID is present in the versionMap override
+        productVersion = versionMap.get(manifest["ProductBuildVersion"], manifest["ProductVersion"])
+
         file.write("{{keys\n")
-        file.write(" | {} = {}\n".format("Version".ljust(maxlen), manifest["ProductVersion"]))
+        file.write(" | {} = {}\n".format("Version".ljust(maxlen), productVersion))
         file.write(" | {} = {}\n".format("Build".ljust(maxlen), manifest["ProductBuildVersion"]))
         file.write(" | {} = {}\n".format("Device".ljust(maxlen), infodict["identifier"] if infodict != None else (ProductType if ProductType != None else "?")))
         file.write(" | {} = {}\n".format("Codename".ljust(maxlen), identity["Info"]["BuildTrain"]))
@@ -359,6 +363,15 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     print("Keys saved to " + outfile)
 
+def parseVersionMap(path):
+    versionMap = {}
+    with open(path, "r") as f:
+        for line in f:
+            build, _, version = line.strip().partition(" ")
+            versionMap[build] = version
+
+    return versionMap
+
 def usage():
     print("Usage: " + argv[0] + " <-i <input>|-d <identifier>> [-jpw] [-v <version>] [-b <bdid>] [options] [-a] [-o <output>] [-m <model>]")
     print("Extracts iOS encryption keys from an IPSW using a physical device's AES engine.")
@@ -377,6 +390,7 @@ def usage():
     print("    -v, --version <version>      Version of iOS to download (without this, downloads all versions and implies -a)")
     print("    -w, --wiki                   Format output for iPhone Wiki upload")
     print("    -m, --model <model>          Device model (like iPhone8,4) to include in wiki format")
+    print("    --version-map <file>         Path to a file listing build IDs and version numbers (like '17A5547d 13.0 beta 5')")
 
 def getext(t):
     if t == 0: return "json"
@@ -388,13 +402,14 @@ if __name__ == "__main__":
         usage()
         exit(0)
     
-    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpwb:m:", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help", "bdid=", "model="])
+    optlist, args = getopt.getopt(argv[1:], "hi:o:d:v:ajpwb:m:", ["device=", "input=", "output=", "auto-name", "json", "plist", "version=", "wiki", "help", "bdid=", "model=", "version-map="])
     inputName = None
     inputDevice = None
     inputVersion = None
     outputName = None
     outputType = None
     autoName = False
+    versionMapPath = None
     for o, a in optlist:
         if o == "-j" or o == "--json":
             if outputType == None: outputType = 0
@@ -428,6 +443,8 @@ if __name__ == "__main__":
             bdid = a
         elif o == "-m" or o == "--model":
             deviceIdentifier = a
+        elif o == '--version-map':
+            versionMapPath = a
     
     if outputType == None: outputType = 0
     if inputName == None and inputDevice == None:
@@ -496,5 +513,8 @@ if __name__ == "__main__":
             m = re.match("(iP\w+?[0-9a-z._,]+?[0-9.]+_[0-9]+[A-Z][0-9]+)_Restore.ipsw", path.basename(inputName))
             outputName = m.group(1) + "_Keys." + getext(outputType)
         else: outputName = outputName + "/" + inputName.replace(".ipsw", "") + "_Keys." + getext(outputType)
+
+    if versionMapPath:
+        versionMap = parseVersionMap(versionMapPath)
     
     extractKeys(inputName, outputName, outtype=outputType, delete=inputDevice != None, infodict=infoDict)
