@@ -308,6 +308,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             file.write(" | {} = {}\n".format('Model2'.ljust(maxlen), niceBoardConfig(boardConfig2)))
             file.write("\n")
 
+        # we already printed a blank line above, either in the boardConfig2 block or earlier
+        needsNewline = False
+
         del output["BatteryPlugin"]
         for k in ["RootFS", "RootFS2", "UpdateRamDisk", "UpdateRamDisk2", "RestoreRamDisk", "RestoreRamDisk2"]:
             if k not in output.keys(): continue
@@ -318,6 +321,8 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             elif k == "UpdateRamDisk2": wk = "UpdateRamdisk2"
             else: wk = k
 
+            if needsNewline: file.write("\n")
+
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
@@ -325,13 +330,15 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
                     file.write(" | " + (wk + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n\n")
                 else:
                     file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
-                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
+                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n")
             elif k == "RootFS" and manifest["ProductVersion"][0] != "1":
                 file.write(" | " + (wk + "IV").ljust(maxlen) + " = ?\n")
-                file.write(" | " + (wk + "Key").ljust(maxlen) + " = ?\n\n")
+                file.write(" | " + (wk + "Key").ljust(maxlen) + " = ?\n")
             else:
-                file.write(" | " + (wk + ("Key" if wk == "RootFS" else "IV")).ljust(maxlen) + " = Not Encrypted\n\n")
+                file.write(" | " + (wk + ("Key" if wk == "RootFS" else "IV")).ljust(maxlen) + " = Not Encrypted\n")
             del output[k]
+            needsNewline = True
+
         for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
             if k.replace('2','') in ("RestoreSEP", "RestoreDeviceTree", "RestoreTrustCache", "UpdateTrustCache", "StaticTrustCache", "RestoreLogo"): continue
 
@@ -344,17 +351,22 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             elif k == "Liquid": wk = "LiquidDetect"
             else: wk = k
 
+            if needsNewline: file.write("\n")
+
             file.write(" | " + wk.ljust(maxlen) + " = " + path.basename(v["Path"]).replace(".dmg", "") + "\n")
             if v["Encrypted"]:
                 if "KBAG" in v.keys():
                     file.write(" | " + (wk + "IV").ljust(maxlen) + " = Unknown\n | " + (wk + "Key").ljust(maxlen) + " = Unknown\n")
-                    file.write(" | " + (wk + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n\n")
+                    file.write(" | " + (wk + "KBAG").ljust(maxlen) + " = " + v["KBAG"] + "\n")
                 else:
                     file.write(" | " + (wk + "IV").ljust(maxlen) + " = " + v["IV"] + "\n")
-                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n\n")
+                    file.write(" | " + (wk + "Key").ljust(maxlen) + " = " + v["Key"] + "\n")
             else:
-                file.write(" | " + (wk + "IV").ljust(maxlen) + " = Not Encrypted\n\n")
-        file.write("}}")
+                file.write(" | " + (wk + "IV").ljust(maxlen) + " = Not Encrypted\n")
+
+            needsNewline = True
+
+        file.write("}}\n")
     file.close()
 
     if delete:
