@@ -1,3 +1,7 @@
+This script was originally written by @MCJack123,
+posted on this Gist:
+https://gist.github.com/MCJack123/b7ded5a4b2a221e13dd3492f2971ae34
+
 # How to use this
 1. Download the script to the same folder as ipwndfu
 2. Boot the device in DFU mode and run checkm8 exploit
