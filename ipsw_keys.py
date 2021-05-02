@@ -3,15 +3,15 @@ from sys import argv, stdout
 from os import system, remove, path
 from urlparse import urlparse
 import re
-import dfu
+#import dfu
 import ssl
 import math
 import json
 import getopt
-import image3
-import dfuexec
+#import image3
+#import dfuexec
 import httplib
-import usbexec
+#import usbexec
 import zipfile
 import plistlib
 
