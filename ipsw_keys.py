@@ -123,6 +123,8 @@ versionMap = {}
 
 def getInfo():
     global serial_number, cpid, bdid
+    cpid = "7001" # A8X
+    return
     dev = dfu.acquire_device()
     serial_number = dev.serial_number
     print("Found:" + serial_number)
@@ -221,7 +223,7 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
 
     for (restoreBehavior, identityType) in (('Erase','restore'), ('Update','update')):
         identity = getIdentity(manifest, restoreBehavior, identityType)
-        output.update(convertKeys(zip, identity, identityType))
+        output.update(convertKeys(zip, identity, identityType, kbagOnly=True))
 
     boardConfig = identity["Info"]["DeviceClass"]
     boardConfig2 = None
