@@ -339,17 +339,20 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             del output[k]
             needsNewline = True
 
-        for k,v in sorted(output.items(), key=lambda k: (k[0].lower(), k[1])):
-            if k.replace('2','') in ("RestoreSEP", "RestoreDeviceTree", "RestoreTrustCache", "UpdateTrustCache", "StaticTrustCache", "RestoreLogo"): continue
+        KEY_REPLACEMENTS = {
+            "KernelCache":      "Kernelcache",
+            "KernelCache2":     "Kernelcache2",
+            "SEP":              "SEPFirmware",
+            "SEP2":             "SEPFirmware2",
+            "AOP":              "AOPFirmware",
+            "AOP2":             "AOPFirmware2",
+            "Liquid":           "LiquidDetect",
+        }
+        items = [(KEY_REPLACEMENTS.get(k, k), v) for k,v in output.items()]
+        items = sorted(items, key=lambda k: k[0].lower())
 
-            if k == "KernelCache": wk = "Kernelcache"
-            elif k == "KernelCache2": wk = "Kernelcache2"
-            elif k == "SEP": wk = "SEPFirmware"
-            elif k == "SEP2": wk = "SEPFirmware2"
-            elif k == "AOP": wk = "AOPFirmware"
-            elif k == "AOP2": wk = "AOPFirmware2"
-            elif k == "Liquid": wk = "LiquidDetect"
-            else: wk = k
+        for wk,v in items:
+            if wk.replace('2','') in ("RestoreSEP", "RestoreDeviceTree", "RestoreTrustCache", "UpdateTrustCache", "StaticTrustCache", "RestoreLogo"): continue
 
             if needsNewline: file.write("\n")
 
