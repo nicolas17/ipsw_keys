@@ -339,6 +339,9 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             del output[k]
             needsNewline = True
 
+        if 'DCP' in output and 'RestoreDCP' in output and output['DCP'] == output['RestoreDCP']:
+            del output['RestoreDCP']
+
         KEY_REPLACEMENTS = {
             "KernelCache":      "Kernelcache",
             "KernelCache2":     "Kernelcache2",
@@ -346,7 +349,17 @@ def extractKeys(infile, outfile, outtype=0, delete=False, infodict=None):
             "SEP2":             "SEPFirmware2",
             "AOP":              "AOPFirmware",
             "AOP2":             "AOPFirmware2",
+            "AVE":              "AppleAVE",
             "Liquid":           "LiquidDetect",
+            "GFX":              "ARMFW",
+            "Ap,HapticAssets":  "HapticAssets",
+            "Ap,Scorpius":      "MConnector",
+            "LowPowerWallet0":  "LowPowerMode",
+            "LowPowerWallet1":  "LowPowerFindMyMode",
+            "SIO":              "SmartIOFirmware",
+            "ANS":              "ANSF",
+            "RestoreANS":       "RANS",
+            "WCHFirmwareUpdater": "WirelessPower"
         }
         items = [(KEY_REPLACEMENTS.get(k, k), v) for k,v in output.items()]
         items = sorted(items, key=lambda k: k[0].lower())
