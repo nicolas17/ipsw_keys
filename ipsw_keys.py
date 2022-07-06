@@ -189,6 +189,9 @@ def convertKeys(zipfile, identity, identityType, kbagOnly=False):
 
     for k,v in identity["Manifest"].items():
         if not "Path" in v["Info"].keys(): continue
+        if k.startswith("Cryptex1"):
+            output[k] = {"Path": v["Info"]["Path"], "Encrypted": False}
+            continue
         if k == "OS":
             output["RootFS"] = {"Path": v["Info"]["Path"], "Encrypted": False}
             continue
